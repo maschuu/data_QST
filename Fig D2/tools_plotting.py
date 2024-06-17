@@ -1,3 +1,6 @@
+
+
+
 import numpy as np
 
 import matplotlib
@@ -9,95 +12,84 @@ from matplotlib import pyplot as plt
 import pickle
 
 
+# Plotting Figure D2
 
-
-            
-            
-          
-# for plotting figure D2
-def plot_infids(samples,n,noise_position,strength_a,noise_a,layers_max_a,ds_a,d_b,layers_max_b,noise_type_b,strengths_b):
-    
-    #creating a big figure that allows 2 subplots
-    fig, axs = plt.subplots(1,2, figsize=(15,6))
-    
-    #for increasing the vertical space between the subplots
-    fig.subplots_adjust(wspace=0.3)
-    
-    # adding titles to the subplots
-    axs[0].set_title("(a)",fontsize=28, pad=20)
-    axs[1].set_title("(b)",fontsize=28, pad=20)
-    
-    #plotting Fig D2a
-    
-    # we need this for reading out the data
-    if noise_a is not None:
-
-        #noise_type tells us which noise we have
-        noise_type_a = list(noise_a.keys())[0]
-        
-        #reading out the noise strength
-        strength_a=noise_a[noise_type_a]
-        
-    # generating a list of layers
-    layers_a=np.linspace(1,layers_max_a,layers_max_a)
-
-    # data for different graphs are plotted with different symbols and colors
-    symbols_a=["+","x","v","."]
-    colors_a=["r", "b","m", "y" ]
-
-    # going over the different graphs and plotting the corresponding infidelities
-    for i in range (0,len(ds_a)):
-      
-        # the degree of the considered graph
-        d_a=ds_a[i]
-
-        # choose symbol and color for the considered graph
-        symbol_chosen_a=symbols_a[i]
-        color_chosen_a=colors_a[i]
-
-        #reading out the average infidelities
-        infids_avg_a=pickle.load(  open(  "Data/avg_infidelity_"+ str(n)+ "_qubits_under_"+ str(noise_type_a) + "_of_strength_" +str(strength_a) + "_noise_position_" + str(noise_position) + "_with_" + str(layers_max_a) +"_layers_and_"  +str(samples) + "_samples_degree_" +str(d_a) +".p", "rb" ) )  
-    
-        axs[0].plot(layers_a, infids_avg_a , symbol_chosen_a + color_chosen_a,markevery=5 ,label = str(d_a) + " - regular" )
-
-    axs[0].set_ylabel("$1-F \ (\\rho_{\mathcal{A}}, \\rho_{\mathcal{A}_{\mathrm{Haar}}  }) $",fontsize=20)
-    axs[0].set_xlabel("layer $\ell$",fontsize=20)
-    axs[0].tick_params(axis='both', labelsize=15)
-    axs[0].legend(fontsize=15)
-    
-    #plotting Fig D2b
+# Comparing a system of n qubits with a system of m qubits. For a given AD strength gammam in the m qubit system we compute the amplitude damping strength gamman in the n qubit system
+# We do this such that both systems feature the same global depolarizing strength peff
+# We need this function because the universal circuit has a different number of qubits than the qaoa circuits for d-regular graphs, which we consider
+def get_gamman(n,m,gammam):
      
-    # generating a list of layers
-    layers_b=np.linspace(1,layers_max_b,layers_max_b)
+     gamman=1- (  np.power( ( 2**(2*n) -1  ) * (  ( (1 + np.sqrt(1-gammam )  )**(2*m) -1)  /(2**(2*m)-1  )    ) +1    , (1/(2*n))  )  -1      )**2
+
+     return gamman
+ 
+
+# ds contains the degrees of the graphs
+def plot_fidelities_qaoa(n,ds,noise,samples,layers_max):
     
-    # data for different noise strengths are plotted with different symbols and colors
-    symbols_b=["+",".","x"]  
-    colors_b= ["m"  ,"r","b"]
-    
-    #going over the different noise strengths
-    for i in range (0,len(strengths_b)):
+    # creating a list of the number of layers
+    layers=np.linspace(1,layers_max,layers_max)
+
+    # we need this to read out the data
+    if noise is not None:   
         
-        # the noise strength of the considered graph
-        strength_b=strengths_b[i]
+        #noise_type tells us which noise we have
+        noise_type = list(noise.keys())[0]
         
-        # choose symbol and color for the considered noise strength
-        color_chosen_b=colors_b[i]
-        symbol_b=symbols_b[i]
-
-        #reading out the average infidelities
-        infids_avg_b=pickle.load(  open(  "Data/avg_infidelity_"+ str(n)+ "_qubits_under_"+ str(noise_type_b) + "_of_strength_" +str(strength_b) + "_noise_position_" + str(noise_position) + "_with_" + str(layers_max_b) +"_layers_and_"  +str(samples) + "_samples_degree_" +str(d_b) +".p", "rb" ) )
-
-        plt.plot(layers_b, infids_avg_b  ,symbol_b + color_chosen_b, markevery=5   ,label =  " $\gamma_{\downarrow}$ =  " + str(strength_b)  )
-
-    axs[1].set_ylabel("$1-F \ (\\rho_{\mathcal{A}}, \\rho_{\mathcal{A}_{\mathrm{Haar}}  }) $",fontsize=20)
-    axs[1].set_xlabel("layer $\ell$",fontsize=20)
-    axs[1].tick_params(axis='both', labelsize=15)
-    axs[1].legend(fontsize=15)
+        #reading out the noise strength  
+        strength=noise[noise_type]
+           
+    #each graph gets a different symbol and color
+    symbols=["+","x","D","."]
+    colors=["r", "b","m", "y" ]
     
-
-
-
-
+    for i in range (0,len(ds)):
             
-            
-            
+            # this is the symbol and the color we choose for the current graph
+            d=ds[i]
+            symbol=symbols[i]
+            color=colors[i]
+
+            #reading out the fidelities       
+            fids=pickle.load( open("Data/fidelities_"+ str(n)+ "_qubits_under_"+ str(noise_type) + "_of_strength_" +str(strength) + "_with_" + str(layers_max) +"_layers_and_"  +str(samples) + "_samples_degree_" +str(d) +".p", "rb" ) )      
+
+            if noise_type=="dephasing" or noise_type=="depolarizing" or noise_type=="amp_damping":
+
+                plt.plot(layers,fids, symbol + color,markevery=1,label= str(d)+ "-regular")
+
+            else:              
+                #warns us if we have asked for another noise model  
+                raise ValueError("Noise type error: unknown noise")
+                       
+            #plotting a horizontal line at fidelity=1 to see better when we reach the fidelity 1
+            plt.axhline(1, 0, layers_max,color = 'k',linestyle="dashed")
+
+            plt.xlabel("layer $\ell$", fontsize=18)
+            plt.ylabel("$ \\tilde{F}  $", fontsize=18)
+        
+    # plotting the universal qaoa circuit
+    # we chose the convention that the universal circuit has degree 0
+    d=0
+    
+    # the circuit is only universal if it has an odd number of qubits, we choose n=5 and save the number of qubits in the original circuit in m
+    m=n
+    n=5
+    
+    # we now translate the strength of AD noise from a system with m qubits to a system with n=5 qubits, such that both systems get the same peff
+    if noise_type=="amp_damping":
+
+        gamman=get_gamman(m=m,n=n,gammam=strength)
+
+    else: 
+        #warns us if we have asked for another noise model
+        raise ValueError("We only designed the function to compute the noise strength in the universal circuit for AD")
+                 
+    #reading out the fidelities for the universal circuit
+    fids=pickle.load( open("Data/fidelities_"+ str(n)+ "_qubits_under_"+ str(noise_type) + "_of_strength_" +str(gamman) + "_with_" + str(layers_max) +"_layers_and_"  +str(samples) + "_samples_degree_" +str(d) +".p", "rb" ) ) 
+
+    plt.plot(layers,fids, "s c",markevery=1,label="universal")
+    plt.xticks(np.arange(0, layers_max, step=5),fontsize=15)
+    plt.yticks(fontsize=15)
+    plt.ylim([0.945,1.005])
+    plt.legend(ncol=2,fontsize=15)  
+    
